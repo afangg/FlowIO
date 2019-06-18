@@ -1,10 +1,8 @@
 //
 //  BLECentralViewController.swift
-//  Basic Chat
+//  Bubble
 //
-//  Created by Trevor Beaton on 11/29/16.
-//  Copyright © 2016 Vanguard Logic LLC. All rights reserved.
-//
+
 
 import Foundation
 import UIKit
@@ -13,8 +11,10 @@ import CoreBluetooth
 
 var txCharacteristic : CBCharacteristic?
 var rxCharacteristic : CBCharacteristic?
+var batCharacteristic : CBCharacteristic?
 var blePeripheral : CBPeripheral?
-var characteristicASCIIValue = NSString()
+var characteristicData = String()
+var batteryPercent = -1
 
 
 
@@ -47,12 +47,8 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
         self.baseTableView.delegate = self
         self.baseTableView.dataSource = self
         self.baseTableView.reloadData()
-        
-        /*Our key player in this app will be our CBCentralManager. CBCentralManager objects are used to manage discovered or connected remote peripheral devices (represented by CBPeripheral objects), including scanning for, discovering, and connecting to advertising peripherals.
-         */
+    
         centralManager = CBCentralManager(delegate: self, queue: nil)
-        let backButton = UIBarButtonItem(title: "Disconnect", style: .plain, target: nil, action: nil)
-        navigationItem.backBarButtonItem = backButton
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -68,8 +64,6 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
         centralManager?.stopScan()
     }
     
-    /*Okay, now that we have our CBCentalManager up and running, it's time to start searching for devices. You can do this by calling the "scanForPeripherals" method.*/
-    
     func startScan() {
         peripherals = []
         print("Now Scanning...")
@@ -77,9 +71,8 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
         centralManager?.scanForPeripherals(withServices: [BLEService_UUID] , options: [CBCentralManagerScanOptionAllowDuplicatesKey:false])
         Timer.scheduledTimer(timeInterval: 17, target: self, selector: #selector(self.cancelScan), userInfo: nil, repeats: false)
     }
-    
-    /*We also need to stop scanning at some point so we'll also create a function that calls "stopScan"*/
-    func cancelScan() {
+
+    @objc func cancelScan() {
         self.centralManager?.stopScan()
         print("Scan Stopped")
         print("Number of Peripherals Found: \(peripherals.count)")
@@ -160,11 +153,10 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
         //Once connected, move to new view controller to manager incoming and outgoing data
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
         
-        let uartViewController = storyboard.instantiateViewController(withIdentifier: "UartModuleViewController") as! UartModuleViewController
+        let controllerVC = storyboard.instantiateViewController(withIdentifier: "ControllerMenu") as! ControllerMenu
         
-        uartViewController.peripheral = peripheral
         
-        navigationController?.pushViewController(uartViewController, animated: true)
+        navigationController?.pushViewController(controllerVC, animated: true)
     }
     
     /*
@@ -198,6 +190,7 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
             return
         }
         //We need to discover the all characteristic
+        print(services)
         for service in services {
             
             peripheral.discoverCharacteristics(nil, for: service)
@@ -243,6 +236,12 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
                 txCharacteristic = characteristic
                 print("Tx Characteristic: \(characteristic.uuid)")
             }
+            if characteristic.uuid.isEqual(BatterCharacteristic_uuid_Rx){
+                batCharacteristic = characteristic
+                peripheral.setNotifyValue(true, for: batCharacteristic!)
+                peripheral.readValue(for: characteristic)
+                print("Bat Characteristic: \(characteristic.uuid)")
+            }
             peripheral.discoverDescriptors(for: characteristic)
         }
     }
@@ -254,13 +253,16 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
         
         if characteristic == rxCharacteristic {
-            if let ASCIIstring = NSString(data: characteristic.value!, encoding: String.Encoding.utf8.rawValue) {
-                characteristicASCIIValue = ASCIIstring
-                print("Value Recieved: \((characteristicASCIIValue as String))")
+            if let rxValue = characteristic.value {
+                print(rxValue)
+                let dataString = NSString(data: rxValue, encoding: String.Encoding.utf8.rawValue)
+                characteristicData = dataString! as String
+                print("Value Recieved: \(characteristicData)")
                 NotificationCenter.default.post(name:NSNotification.Name(rawValue: "Notify"), object: nil)
                 
             }
         }
+        
     }
     
     
@@ -362,8 +364,8 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
             //If Bluetooth is off, display a UI alert message saying "Bluetooth is not enable" and "Make sure that your bluetooth is turned on"
             print("Bluetooth Disabled- Make sure your Bluetooth is turned on")
             
-            let alertVC = UIAlertController(title: "Bluetooth is not enabled", message: "Make sure that your bluetooth is turned on", preferredStyle: UIAlertControllerStyle.alert)
-            let action = UIAlertAction(title: "ok", style: UIAlertActionStyle.default, handler: { (action: UIAlertAction) -> Void in
+            let alertVC = UIAlertController(title: "Bluetooth is not enabled", message: "Make sure that your bluetooth is turned on", preferredStyle: UIAlertController.Style.alert)
+            let action = UIAlertAction(title: "ok", style: UIAlertAction.Style.default, handler: { (action: UIAlertAction) -> Void in
                 self.dismiss(animated: true, completion: nil)
             })
             alertVC.addAction(action)

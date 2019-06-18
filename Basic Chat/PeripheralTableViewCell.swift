@@ -1,10 +1,8 @@
 //
 //  PeripheralTableViewCell.swift
-//  Basic Chat
+//  Bubble
 //
-//  Created by Trevor Beaton on 11/30/16.
-//  Copyright © 2016 Vanguard Logic LLC. All rights reserved.
-//
+
 
 import UIKit
 
