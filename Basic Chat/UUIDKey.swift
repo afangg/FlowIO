@@ -16,5 +16,5 @@ let MaxCharacters = 20
 let BLEService_UUID = CBUUID(string: kBLEService_UUID)
 let BLE_Characteristic_uuid_Tx = CBUUID(string: kBLE_Characteristic_uuid_Tx)//(Property = Write without response)
 let BLE_Characteristic_uuid_Rx = CBUUID(string: kBLE_Characteristic_uuid_Rx)// (Property = Read/Notify)
-let BatteryService_UUID = CBUUID(string: "6e40180F-b5a3-f393-e0a9-e50e24dcca9e")
-let BatterCharacteristic_uuid_Rx = CBUUID(string: "6e402A19-b5a3-f393-e0a9-e50e24dcca9e")
+let BatteryService_UUID = CBUUID(string: "0x180F")
+let BatterCharacteristic_uuid_Rx = CBUUID(string: "0x2A19")

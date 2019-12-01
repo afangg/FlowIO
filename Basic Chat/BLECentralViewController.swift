@@ -14,6 +14,7 @@ var rxCharacteristic : CBCharacteristic?
 var batCharacteristic : CBCharacteristic?
 var blePeripheral : CBPeripheral?
 var characteristicData = String()
+var batteryData = Int()
 var batteryPercent = -1
 
 
@@ -51,6 +52,7 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
         centralManager = CBCentralManager(delegate: self, queue: nil)
     }
     
+        
     override func viewDidAppear(_ animated: Bool) {
         disconnectFromDevice()
         super.viewDidAppear(animated)
@@ -68,7 +70,7 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
         peripherals = []
         print("Now Scanning...")
         self.timer.invalidate()
-        centralManager?.scanForPeripherals(withServices: [BLEService_UUID] , options: [CBCentralManagerScanOptionAllowDuplicatesKey:false])
+        centralManager?.scanForPeripherals(withServices: [BLEService_UUID] , options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
         Timer.scheduledTimer(timeInterval: 17, target: self, selector: #selector(self.cancelScan), userInfo: nil, repeats: false)
     }
 
@@ -147,13 +149,13 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
         //Discovery callback
         peripheral.delegate = self
         //Only look for services that matches transmit uuid
-        peripheral.discoverServices([BLEService_UUID])
+        peripheral.discoverServices([BLEService_UUID, BatteryService_UUID])
         
         
         //Once connected, move to new view controller to manager incoming and outgoing data
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
         
-        let controllerVC = storyboard.instantiateViewController(withIdentifier: "ControllerMenu") as! ControllerMenu
+        let controllerVC = storyboard.instantiateViewController(withIdentifier: "tabBarVC")
         
         
         navigationController?.pushViewController(controllerVC, animated: true)
@@ -189,8 +191,9 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
         guard let services = peripheral.services else {
             return
         }
+
         //We need to discover the all characteristic
-        print(services)
+        print("\(services.count) services were discovered")
         for service in services {
             
             peripheral.discoverCharacteristics(nil, for: service)
@@ -218,7 +221,7 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
         }
         
         print("Found \(characteristics.count) characteristics!")
-        
+
         for characteristic in characteristics {
             //looks for the right characteristic
             
@@ -254,16 +257,26 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
         
         if characteristic == rxCharacteristic {
             if let rxValue = characteristic.value {
-                print(rxValue)
+                //print(rxValue)
                 let dataString = NSString(data: rxValue, encoding: String.Encoding.utf8.rawValue)
                 characteristicData = dataString! as String
                 print("Value Recieved: \(characteristicData)")
                 NotificationCenter.default.post(name:NSNotification.Name(rawValue: "Notify"), object: nil)
-                
             }
         }
-        
+        if characteristic == batCharacteristic {
+            if let batValue = characteristic.value {
+                //print(batValue)
+//                let dataString = NSString(data: batValue, encoding: String.Encoding.utf8.rawValue)
+//                batteryData = dataString! as String
+                batteryData = Int(batValue[0])
+                //print("Value Recieved: \(batteryData)")
+                NotificationCenter.default.post(name:NSNotification.Name(rawValue: "Battery"), object: nil)
+            }
+        }
     }
+        
+
     
     
     func peripheral(_ peripheral: CBPeripheral, didDiscoverDescriptorsFor characteristic: CBCharacteristic, error: Error?) {
@@ -276,7 +289,7 @@ class BLECentralViewController : UIViewController, CBCentralManagerDelegate, CBP
         if ((characteristic.descriptors) != nil) {
             
             for x in characteristic.descriptors!{
-                let descript = x as CBDescriptor!
+                let descript = x as CBDescriptor?
                 print("function name: DidDiscoverDescriptorForChar \(String(describing: descript?.description))")
                 print("Rx Value \(String(describing: rxCharacteristic?.value))")
                 print("Tx Value \(String(describing: txCharacteristic?.value))")
