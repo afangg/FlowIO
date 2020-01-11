@@ -24,8 +24,11 @@ class AllRemoteViewController: UIViewController, CBPeripheralManagerDelegate {
     var peripheralManager: CBPeripheralManager?
     var inflate = "+"
     var deflate = "-"
+    var sense = 0
+
     @IBOutlet weak var batteryLevel: UILabel!
     @IBOutlet weak var batteryIcon: UIImageView!
+    @IBOutlet weak var pressure: UIButton!
     
     @IBOutlet var inflateButtons: [UIButton]!
     @IBOutlet var deflateButtons: [UIButton]!
@@ -64,6 +67,21 @@ class AllRemoteViewController: UIViewController, CBPeripheralManagerDelegate {
             }
         }
     }
+    
+    @IBAction func senseMode(_ sender: UIButton) {
+        if sense == 0 {
+            sense = 1
+            sender.setTitle("Sensing...", for: .normal)
+            writeValue(data: "?")
+
+        }
+        else {
+            sense = 0
+            sender.setTitle("Pressure Mode", for: .normal)
+        }
+    }
+    
+    
     
     @IBAction func inflateValve(_ sender: UIButton) {
         if String(sender.tag) != "" {
@@ -114,8 +132,17 @@ class AllRemoteViewController: UIViewController, CBPeripheralManagerDelegate {
             notification in
             batteryPercent = Int(batteryData) ?? -1
             self.setBattery()
-            
         }
+        print("Waiting for pressure data")
+
+        NotificationCenter.default.addObserver(forName: NSNotification.Name(rawValue: "Notify"), object: nil , queue: nil) {
+        notification in
+        self.pressure.titleLabel?.text = characteristicData
+            
+                    
+        }
+            
+        
     }
     func setBattery() {
         //print("Setting battery")
@@ -145,6 +172,7 @@ class AllRemoteViewController: UIViewController, CBPeripheralManagerDelegate {
         
     }
     
+    
     func disconnect() {
         let storyboard = UIStoryboard(name: "Main", bundle: nil)
         let uartVC = storyboard.instantiateViewController(withIdentifier: "BLECentralViewController") as! BLECentralViewController
@@ -173,22 +201,6 @@ class AllRemoteViewController: UIViewController, CBPeripheralManagerDelegate {
     }
     */
     
-    func updateIncomingData () {
-        NotificationCenter.default.addObserver(forName: NSNotification.Name(rawValue: "Notify"), object: nil , queue: nil){
-            notification in
-            let appendString = "\n"
-            let myFont = UIFont(name: "Helvetica Neue", size: 15.0)
-            let myAttributes2 = [convertFromNSAttributedStringKey(NSAttributedString.Key.font): myFont!, convertFromNSAttributedStringKey(NSAttributedString.Key.foregroundColor): UIColor.red]
-            let attribString = NSAttributedString(string: "[Incoming]: " + (characteristicASCIIValue as String) + appendString, attributes: convertToOptionalNSAttributedStringKeyDictionary(myAttributes2))
-            let newAsciiText = NSMutableAttributedString(attributedString: self.consoleAsciiText!)
-            self.baseTextView.attributedText = NSAttributedString(string: characteristicASCIIValue as String , attributes: convertToOptionalNSAttributedStringKeyDictionary(myAttributes2))
-            
-            newAsciiText.append(attribString)
-            
-            self.consoleAsciiText = newAsciiText
-            self.baseTextView.attributedText = self.consoleAsciiText
-            
-        }
-    }
+
 
 }
